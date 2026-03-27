@@ -1,0 +1,9 @@
+[package]
+name = "wrktr"
+version = "0.1.0"
+authors = ["Chip Reed <chip@chip.sh>"]
+repository = "https://github.com/chippers/wrktr"
+license = "Apache-2.0 OR MIT"
+edition = "2024"
+
+[dependencies]
