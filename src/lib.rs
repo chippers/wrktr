@@ -3,6 +3,7 @@ pub mod error;
 pub mod git;
 pub mod linear;
 pub mod paths;
+pub mod secret;
 
 use std::path::Path;
 
@@ -89,20 +90,27 @@ pub fn cmd_worktree(
     cwd: &Path,
     target: Option<&str>,
     issue: Option<&str>,
+    api_key: Option<&str>,
 ) -> Result<(), Error> {
-    let target = target.ok_or_else(|| {
-        Error::InvalidArgument("specify a branch, issue ID, or Linear URL".into())
-    })?;
-
     let branch = if let Some(issue_id) = issue {
-        linear::fetch_branch_name(issue_id)?
-    } else if target.contains("linear.app") {
-        let issue_id = linear::parse_issue_url(target).ok_or_else(|| {
-            Error::InvalidArgument(format!("cannot parse Linear issue ID from: {target}"))
-        })?;
-        linear::fetch_branch_name(&issue_id)?
+        let key = resolve_api_key(api_key)?;
+        linear::fetch_branch_name(issue_id, &key)?
     } else {
-        target.to_string()
+        let target = target.ok_or_else(|| {
+            Error::InvalidArgument("specify a branch, issue ID, or Linear URL".into())
+        })?;
+        if target.contains("linear.app") {
+            let issue_id = linear::parse_issue_url(target).ok_or_else(|| {
+                Error::InvalidArgument(format!("cannot parse Linear issue ID from: {target}"))
+            })?;
+            let key = resolve_api_key(api_key)?;
+            linear::fetch_branch_name(&issue_id, &key)?
+        } else if linear::looks_like_issue_id(target) {
+            let key = resolve_api_key(api_key)?;
+            linear::fetch_branch_name(target, &key)?
+        } else {
+            target.to_string()
+        }
     };
 
     let repo = Repo::detect(cwd).ok_or_else(|| {
@@ -116,4 +124,11 @@ pub fn cmd_worktree(
 
     println!("{}", wt_path.display());
     Ok(())
+}
+
+pub fn resolve_api_key(raw: Option<&str>) -> Result<String, Error> {
+    match raw {
+        Some(raw) => secret::resolve(raw),
+        None => secret::discover("api.linear.app"),
+    }
 }

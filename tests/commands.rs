@@ -162,7 +162,7 @@ fn rm_outside_managed_repo_errors() {
 #[test]
 fn worktree_plain_branch_creates_and_adds() {
     let git = MockGit::new();
-    cmd_worktree(&git, &repo_cwd(), Some("my-feature"), None).unwrap();
+    cmd_worktree(&git, &repo_cwd(), Some("my-feature"), None, None).unwrap();
 
     let calls = git.calls();
     assert_eq!(calls.len(), 2);
@@ -174,13 +174,13 @@ fn worktree_plain_branch_creates_and_adds() {
 #[test]
 fn worktree_no_target_errors() {
     let git = MockGit::new();
-    let err = cmd_worktree(&git, &repo_cwd(), None, None).unwrap_err();
+    let err = cmd_worktree(&git, &repo_cwd(), None, None, None).unwrap_err();
     assert!(err.to_string().contains("specify a branch"));
 }
 
 #[test]
 fn worktree_outside_managed_repo_errors() {
     let git = MockGit::new();
-    let err = cmd_worktree(&git, Path::new("/tmp"), Some("branch"), None).unwrap_err();
+    let err = cmd_worktree(&git, Path::new("/tmp"), Some("branch"), None, None).unwrap_err();
     assert!(err.to_string().contains("not inside a managed repo"));
 }

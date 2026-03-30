@@ -23,6 +23,18 @@ fn run() -> Result<(), Error> {
         Some(Command::Clone { repo }) => cmd_clone(&git, &repo),
         Some(Command::Prune) => cmd_prune(&git, &cwd),
         Some(Command::Rm { worktree, all }) => cmd_rm(&git, &cwd, worktree.as_deref(), all),
-        None => cmd_worktree(&git, &cwd, cli.target.as_deref(), cli.issue.as_deref()),
+        Some(Command::Linear { issue }) => {
+            let key = wrktr::resolve_api_key(cli.linear_api_key.as_deref())?;
+            let branch = wrktr::linear::fetch_branch_name(&issue, &key)?;
+            println!("{branch}");
+            Ok(())
+        }
+        None => cmd_worktree(
+            &git,
+            &cwd,
+            cli.target.as_deref(),
+            cli.issue.as_deref(),
+            cli.linear_api_key.as_deref(),
+        ),
     }
 }

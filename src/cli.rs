@@ -13,6 +13,11 @@ pub struct Cli {
     /// Linear issue ID (e.g. FS-1801)
     #[arg(short, long)]
     pub issue: Option<String>,
+
+    /// Linear API key (literal, op://vault/item/field, or bw://ItemName). Falls back to
+    /// LINEAR_API_KEY env var.
+    #[arg(long, env = "LINEAR_API_KEY")]
+    pub linear_api_key: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -28,5 +33,10 @@ pub enum Command {
         /// Remove all worktrees
         #[arg(long)]
         all: bool,
+    },
+    /// Print the Linear-suggested git branch name for an issue
+    Linear {
+        /// Issue ID (e.g. FS-1801)
+        issue: String,
     },
 }
