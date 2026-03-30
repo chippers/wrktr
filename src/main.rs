@@ -35,6 +35,7 @@ fn run() -> Result<(), Error> {
             cli.target.as_deref(),
             cli.issue.as_deref(),
             cli.linear_api_key.as_deref(),
+            cli.memory,
         ),
     }
 }

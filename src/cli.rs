@@ -18,6 +18,10 @@ pub struct Cli {
     /// LINEAR_API_KEY env var.
     #[arg(long, env = "LINEAR_API_KEY")]
     pub linear_api_key: Option<String>,
+
+    /// Share Claude Code auto-memory between main repo and worktree
+    #[arg(long)]
+    pub memory: bool,
 }
 
 #[derive(Subcommand)]

@@ -6,6 +6,26 @@ fn base() -> PathBuf {
     BaseDirs::new().expect("could not determine home directory").home_dir().join("code")
 }
 
+fn home() -> PathBuf {
+    BaseDirs::new().expect("could not determine home directory").home_dir().to_path_buf()
+}
+
+fn claude_project_key(project_path: &Path) -> String {
+    let s = project_path.to_string_lossy();
+    let s = s.trim_end_matches('/');
+    s.replace('/', "-")
+}
+
+/// Returns `~/.claude/projects/{key}/` for the given project path.
+pub fn claude_project_dir(project_path: &Path) -> PathBuf {
+    home().join(".claude").join("projects").join(claude_project_key(project_path))
+}
+
+/// Returns `~/.claude/projects/{key}/memory/` for the given project path.
+pub fn claude_memory_dir(project_path: &Path) -> PathBuf {
+    claude_project_dir(project_path).join("memory")
+}
+
 pub struct Repo {
     pub org: String,
     pub name: String,
@@ -88,5 +108,21 @@ mod tests {
     #[test]
     fn detect_from_code_root() {
         assert!(Repo::detect(&base()).is_none());
+    }
+
+    #[test]
+    fn claude_project_dir_derives_key() {
+        let p = base().join("chippers").join("wrktr");
+        let dir = claude_project_dir(&p);
+        let key = claude_project_key(&p);
+        assert_eq!(dir, home().join(".claude").join("projects").join(key));
+    }
+
+    #[test]
+    fn claude_memory_dir_appends_memory() {
+        let p = base().join("chippers").join("wrktr");
+        let dir = claude_memory_dir(&p);
+        let key = claude_project_key(&p);
+        assert_eq!(dir, home().join(".claude").join("projects").join(key).join("memory"));
     }
 }

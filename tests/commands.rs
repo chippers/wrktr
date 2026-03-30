@@ -162,7 +162,7 @@ fn rm_outside_managed_repo_errors() {
 #[test]
 fn worktree_plain_branch_creates_and_adds() {
     let git = MockGit::new();
-    cmd_worktree(&git, &repo_cwd(), Some("my-feature"), None, None).unwrap();
+    cmd_worktree(&git, &repo_cwd(), Some("my-feature"), None, None, false).unwrap();
 
     let calls = git.calls();
     assert_eq!(calls.len(), 2);
@@ -174,13 +174,58 @@ fn worktree_plain_branch_creates_and_adds() {
 #[test]
 fn worktree_no_target_errors() {
     let git = MockGit::new();
-    let err = cmd_worktree(&git, &repo_cwd(), None, None, None).unwrap_err();
+    let err = cmd_worktree(&git, &repo_cwd(), None, None, None, false).unwrap_err();
     assert!(err.to_string().contains("specify a branch"));
 }
 
 #[test]
 fn worktree_outside_managed_repo_errors() {
     let git = MockGit::new();
-    let err = cmd_worktree(&git, Path::new("/tmp"), Some("branch"), None, None).unwrap_err();
+    let err =
+        cmd_worktree(&git, Path::new("/tmp"), Some("branch"), None, None, false).unwrap_err();
     assert!(err.to_string().contains("not inside a managed repo"));
+}
+
+// ---------------------------------------------------------------------------
+// symlink helpers
+// ---------------------------------------------------------------------------
+
+fn unique_tmp(name: &str) -> std::path::PathBuf {
+    let dir = std::env::temp_dir().join(format!("wrktr-test-{name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+#[test]
+fn link_claude_dir_creates_symlink() {
+    let tmp = unique_tmp("claude-dir");
+    let repo = tmp.join("repo");
+    let wt = tmp.join("wt");
+    std::fs::create_dir_all(repo.join(".claude")).unwrap();
+    std::fs::create_dir_all(&wt).unwrap();
+
+    std::os::unix::fs::symlink(repo.join(".claude"), wt.join(".claude")).unwrap();
+
+    let link = wt.join(".claude");
+    assert!(link.exists());
+    assert_eq!(std::fs::read_link(&link).unwrap(), repo.join(".claude"));
+    std::fs::remove_dir_all(&tmp).ok();
+}
+
+#[test]
+fn link_claude_memory_creates_symlink() {
+    let tmp = unique_tmp("claude-mem");
+    let repo = tmp.join("repo");
+    let wt = tmp.join("wt");
+
+    let main_memory = wrktr::paths::claude_memory_dir(&repo);
+    let wt_project = wrktr::paths::claude_project_dir(&wt);
+    std::fs::create_dir_all(&main_memory).unwrap();
+    std::fs::create_dir_all(&wt_project).unwrap();
+    std::os::unix::fs::symlink(&main_memory, wt_project.join("memory")).unwrap();
+
+    let link = wt_project.join("memory");
+    assert!(link.exists());
+    assert_eq!(std::fs::read_link(&link).unwrap(), main_memory);
+    std::fs::remove_dir_all(&tmp).ok();
 }

@@ -11,6 +11,35 @@ use error::Error;
 use git::GitBackend;
 use paths::Repo;
 
+fn link_claude_dir(repo_path: &Path, wt_path: &Path) {
+    let src = repo_path.join(".claude");
+    if !src.is_dir() {
+        return;
+    }
+    let dest = wt_path.join(".claude");
+    if let Err(e) = std::os::unix::fs::symlink(&src, &dest) {
+        eprintln!("warning: could not symlink .claude/: {e}");
+    }
+}
+
+fn link_claude_memory(repo_path: &Path, wt_path: &Path) {
+    let main_memory = paths::claude_memory_dir(repo_path);
+    let wt_project = paths::claude_project_dir(wt_path);
+
+    if let Err(e) = std::fs::create_dir_all(&main_memory) {
+        eprintln!("warning: could not create Claude memory dir: {e}");
+        return;
+    }
+    if let Err(e) = std::fs::create_dir_all(&wt_project) {
+        eprintln!("warning: could not create Claude project dir: {e}");
+        return;
+    }
+    let dest = wt_project.join("memory");
+    if let Err(e) = std::os::unix::fs::symlink(&main_memory, &dest) {
+        eprintln!("warning: could not symlink Claude memory: {e}");
+    }
+}
+
 pub fn cmd_clone(git: &impl GitBackend, repo: &str) -> Result<(), Error> {
     let (url, repo) = if repo.contains("://") || repo.starts_with("git@") {
         let path_part = repo.trim_end_matches(".git").rsplit('/').collect::<Vec<_>>();
@@ -91,6 +120,7 @@ pub fn cmd_worktree(
     target: Option<&str>,
     issue: Option<&str>,
     api_key: Option<&str>,
+    memory: bool,
 ) -> Result<(), Error> {
     let branch = if let Some(issue_id) = issue {
         let key = resolve_api_key(api_key)?;
@@ -121,6 +151,11 @@ pub fn cmd_worktree(
 
     git.create_branch(&repo_path, &branch)?;
     git.add_worktree(&repo_path, &wt_path, &branch)?;
+
+    link_claude_dir(&repo_path, &wt_path);
+    if memory {
+        link_claude_memory(&repo_path, &wt_path);
+    }
 
     println!("{}", wt_path.display());
     Ok(())
