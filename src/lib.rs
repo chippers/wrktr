@@ -96,7 +96,9 @@ pub fn cmd_rm(
                     eprintln!("skipping {} — has unmerged work", path.display());
                     continue;
                 }
+                let branch = entry.file_name();
                 git.remove_worktree(&repo_path, &path)?;
+                git.delete_branch(&repo_path, &branch.to_string_lossy())?;
             }
         }
         return Ok(());
@@ -111,7 +113,8 @@ pub fn cmd_rm(
             "worktree '{branch}' has unmerged work; use git to clean up first"
         )));
     }
-    git.remove_worktree(&repo_path, &wt_path)
+    git.remove_worktree(&repo_path, &wt_path)?;
+    git.delete_branch(&repo_path, branch)
 }
 
 pub fn cmd_worktree(
@@ -148,6 +151,11 @@ pub fn cmd_worktree(
     })?;
     let repo_path = repo.path();
     let wt_path = repo.worktree_path(&branch);
+
+    if wt_path.exists() {
+        println!("{}", wt_path.display());
+        return Ok(());
+    }
 
     git.create_branch(&repo_path, &branch)?;
     git.add_worktree(&repo_path, &wt_path, &branch)?;

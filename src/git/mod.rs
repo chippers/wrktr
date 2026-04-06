@@ -11,6 +11,7 @@ pub trait GitBackend {
     fn create_branch(&self, repo: &Path, branch: &str) -> Result<(), Error>;
     fn add_worktree(&self, repo: &Path, path: &Path, branch: &str) -> Result<(), Error>;
     fn remove_worktree(&self, repo: &Path, path: &Path) -> Result<(), Error>;
+    fn delete_branch(&self, repo: &Path, branch: &str) -> Result<(), Error>;
     fn prune_worktrees(&self, repo: &Path) -> Result<(), Error>;
     fn has_unmerged_work(
         &self,

@@ -51,6 +51,11 @@ impl GitBackend for ShellGit {
         Ok(())
     }
 
+    fn delete_branch(&self, repo: &Path, branch: &str) -> Result<(), Error> {
+        self.run(repo, &["branch", "-d", branch])?;
+        Ok(())
+    }
+
     fn prune_worktrees(&self, repo: &Path) -> Result<(), Error> {
         self.run(repo, &["worktree", "prune"])?;
         Ok(())

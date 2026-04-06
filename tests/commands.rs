@@ -48,6 +48,11 @@ impl GitBackend for MockGit {
         Ok(())
     }
 
+    fn delete_branch(&self, _repo: &Path, branch: &str) -> Result<(), Error> {
+        self.calls.borrow_mut().push(format!("delete_branch {branch}"));
+        Ok(())
+    }
+
     fn prune_worktrees(&self, _repo: &Path) -> Result<(), Error> {
         self.calls.borrow_mut().push("prune".into());
         Ok(())
@@ -131,14 +136,15 @@ fn rm_with_unmerged_work_errors() {
 }
 
 #[test]
-fn rm_without_unmerged_work_removes() {
+fn rm_without_unmerged_work_removes_and_deletes_branch() {
     let git = MockGit::new();
     cmd_rm(&git, &repo_cwd(), Some("my-feature"), false).unwrap();
 
     let calls = git.calls();
-    assert_eq!(calls.len(), 1);
+    assert_eq!(calls.len(), 2);
     assert!(calls[0].starts_with("remove_worktree"));
     assert!(calls[0].contains("my-feature"));
+    assert_eq!(calls[1], "delete_branch my-feature");
 }
 
 #[test]
@@ -172,6 +178,19 @@ fn worktree_plain_branch_creates_and_adds() {
 }
 
 #[test]
+fn worktree_existing_returns_path_without_git_calls() {
+    let git = MockGit::new();
+    let repo = wrktr::paths::Repo::new("chippers", "wrktr");
+    let wt_path = repo.worktree_path("existing-branch");
+    std::fs::create_dir_all(&wt_path).unwrap();
+
+    cmd_worktree(&git, &repo_cwd(), Some("existing-branch"), None, None, false).unwrap();
+
+    assert!(git.calls().is_empty());
+    std::fs::remove_dir_all(&wt_path).ok();
+}
+
+#[test]
 fn worktree_no_target_errors() {
     let git = MockGit::new();
     let err = cmd_worktree(&git, &repo_cwd(), None, None, None, false).unwrap_err();
@@ -181,8 +200,7 @@ fn worktree_no_target_errors() {
 #[test]
 fn worktree_outside_managed_repo_errors() {
     let git = MockGit::new();
-    let err =
-        cmd_worktree(&git, Path::new("/tmp"), Some("branch"), None, None, false).unwrap_err();
+    let err = cmd_worktree(&git, Path::new("/tmp"), Some("branch"), None, None, false).unwrap_err();
     assert!(err.to_string().contains("not inside a managed repo"));
 }
 
